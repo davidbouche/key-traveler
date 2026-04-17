@@ -92,23 +92,22 @@ and directory completion for arguments that take paths (`init`, `add`,
 
 ## Commands
 
-| Command                               | Action |
-|---------------------------------------|--------|
-| `ktraveler init <dir>`                | Initialise a fresh USB vault (`config.toml`, `manifest.json`, `vault/`, `pending/`). |
-| `ktraveler enroll <name>`             | **First host only.** Generate the local key and register its pubkey. |
-| `ktraveler enroll-request <name>`     | On a *new* host: generate the local key and drop an enrollment request into `pending/`. |
-| `ktraveler enroll-approve`            | On an *already enrolled* host: accept pending requests and **re-encrypt the whole vault** for the new hosts. |
-| `ktraveler add <path>…`               | Track one or more files (paths are stored as `~/…` when under `$HOME`). |
-| `ktraveler remove <path>… [--purge]`  | Stop tracking; `--purge` also deletes the encrypted blob. |
-| `ktraveler add-pattern <glob>…`       | Track a glob pattern — resolved on every sync, new matches auto-added. |
-| `ktraveler remove-pattern <glob>…`    | Stop tracking a pattern; already-matched files stay (use `remove` to drop them). |
-| `ktraveler list`                      | List enrolled hosts, patterns and tracked files. |
-| `ktraveler status`                    | Show what `sync` would do (dry run, no changes). |
-| `ktraveler sync`                      | Interactive sync: automatic fast-forward, prompt on conflicts. |
-| `ktraveler push`                      | Force local → vault for every differing file (asks for confirmation on conflicts). |
-| `ktraveler pull`                      | Force vault → local for every differing file (asks for confirmation on conflicts). |
-| `ktraveler verify`                    | Integrity check: every `.age` blob decrypts and its md5 matches the manifest. |
-| `ktraveler completion <shell>`        | Emit a completion script for `bash`, `zsh` or `fish`. |
+| Command                                   | Action |
+|-------------------------------------------|--------|
+| `ktraveler init <dir>`                    | Initialise a fresh USB vault (`config.toml`, `manifest.json`, `vault/`, `pending/`). |
+| `ktraveler enroll list`                   | Print enrolled hosts and pending requests. |
+| `ktraveler enroll request <name>`         | Register this host. Auto-approved if it is the first host on the vault; otherwise a request is dropped into `pending/` for approval on another host. |
+| `ktraveler enroll approve <name>`         | On an already-enrolled host: accept the named pending request and re-encrypt every vault blob for the new recipient. |
+| `ktraveler enroll approve --all`          | Same, for every pending request. |
+| `ktraveler add <path-or-pattern>…`        | Track files and / or glob patterns. Arguments with `*` or `?` go to `[[patterns]]`, others to `[[files]]`. Paths under `$HOME` are stored as `~/…`. |
+| `ktraveler remove <path-or-pattern>… [--purge]` | Mirror of `add`. `--purge` also deletes the encrypted blob (for files only). Removing a pattern does not drop the files it already matched. |
+| `ktraveler list`                          | List enrolled hosts, patterns (with current matches) and tracked files. |
+| `ktraveler status`                        | Show what `sync` would do (dry run, no changes). |
+| `ktraveler sync`                          | Interactive sync: automatic fast-forward, prompt on conflicts. |
+| `ktraveler sync --push-only`              | Only propagate local → vault; skip pull-pending files. |
+| `ktraveler sync --pull-only`              | Only propagate vault → local; skip push-pending files. |
+| `ktraveler verify`                        | Integrity check: every `.age` blob decrypts and its md5 matches the manifest. |
+| `ktraveler completion <shell>`            | Emit a completion script for `bash`, `zsh` or `fish`. |
 
 ## Typical setup
 
@@ -116,34 +115,36 @@ and directory completion for arguments that take paths (`init`, `add`,
 
 ```sh
 ktraveler init /media/david/SECRETS
-KTRAVELER_USB=/media/david/SECRETS ktraveler enroll laptop
+export KTRAVELER_USB=/media/david/SECRETS
+ktraveler enroll request laptop           # auto-approved (first host)
 ktraveler add ~/.ssh/id_ed25519
 ktraveler add ~/.ssh/config
-ktraveler add ~/.config/rclone/rclone.conf
-ktraveler sync                  # first push
+ktraveler add '~/.ssh/id_rsa_*'           # pattern — future keys picked up too
+ktraveler sync                            # first push
 ```
 
 ### Second host (desktop)
 
 ```sh
-# 1) on the desktop, with the USB stick plugged in
-ktraveler enroll-request desktop
+# 1) on the desktop, with the stick plugged in
+ktraveler enroll request desktop          # drops a pending request
 
 # 2) back on the laptop (same stick plugged in)
-ktraveler enroll-approve        # re-encrypts the vault to include desktop
+ktraveler enroll list                     # see what is pending
+ktraveler enroll approve desktop          # re-encrypts the vault for desktop
 
 # 3) back on the desktop
-ktraveler pull                  # retrieves every secret, permissions restored
+ktraveler sync --pull-only                # retrieve every secret, permissions restored
 ```
 
 ### Tracking files by pattern
 
-To stop thinking about `add` every time you create a new key, register a glob
-pattern — every sync-like command re-evaluates it and auto-adds any new
-matches to the config.
+To stop thinking about `add` every time you create a new key, pass a glob
+to the same `add` command — any argument containing `*` or `?` is stored
+as a pattern and re-evaluated on every sync.
 
 ```sh
-ktraveler add-pattern '~/.ssh/id_*'
+ktraveler add '~/.ssh/id_*'
 # -> matches id_ed25519, id_ed25519.pub, id_rsa, id_rsa.pub …
 
 # Later, after generating a new pair:
@@ -158,16 +159,17 @@ ktraveler sync
 Quote the pattern so your shell doesn't pre-expand it:
 
 ```sh
-ktraveler add-pattern '~/.ssh/id_*'      # good — pattern stored literally
-ktraveler add-pattern ~/.ssh/id_*        # shell expands NOW; you only snapshot today's matches
+ktraveler add '~/.ssh/id_*'      # good — pattern stored literally
+ktraveler add ~/.ssh/id_*        # shell expands NOW; you only snapshot today's matches
 ```
 
 Syntax follows Go's `filepath.Glob` (`*`, `?`, `[abc]`). Recursive `**` is
 not supported — add one pattern per directory if needed.
 
-`remove-pattern` drops the pattern but leaves the files it already matched
-in place, so you don't lose history by mistake. Use `remove <path>` to drop
-an individual file.
+`remove '~/.ssh/id_*'` drops the pattern but leaves the files it already
+matched in place, so you don't lose history by mistake. Use
+`remove <path>` (no glob chars) to drop an individual file; add `--purge`
+if you also want the encrypted blob gone from the stick.
 
 ### Day-to-day usage
 

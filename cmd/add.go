@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/david/key-traveler/internal/config"
 	"github.com/david/key-traveler/internal/diff"
@@ -13,10 +14,20 @@ import (
 	"github.com/david/key-traveler/internal/patterns"
 )
 
-// Add declares a file to be tracked. It does not push the file; run sync/push after.
+// isGlob decides whether a user-supplied argument should be treated as a
+// filepath.Glob pattern rather than a literal path. We only trigger on `*`
+// and `?`: `[` alone occurs in legitimate filenames (e.g. `foo[1].txt`) and
+// would cause confusing false positives.
+func isGlob(s string) bool {
+	return strings.ContainsAny(s, "*?")
+}
+
+// Add accepts a mix of literal paths and glob patterns. Each argument is
+// routed based on its shape: patterns register in [[patterns]] and are
+// resolved immediately; plain paths register in [[files]].
 func Add(args []string) error {
 	if len(args) < 1 {
-		return errors.New("usage: ktraveler add <path>")
+		return errors.New("usage: ktraveler add <path-or-pattern>...")
 	}
 
 	root, err := paths.USBRoot()
@@ -28,7 +39,21 @@ func Add(args []string) error {
 		return err
 	}
 
+	touchedPattern := false
 	for _, raw := range args {
+		if isGlob(raw) {
+			stored, err := paths.Contract(raw)
+			if err != nil {
+				return err
+			}
+			if _, err := cfg.AddPattern(stored); err != nil {
+				return err
+			}
+			fmt.Printf("added pattern %q\n", stored)
+			touchedPattern = true
+			continue
+		}
+
 		stored, err := paths.Contract(raw)
 		if err != nil {
 			return err
@@ -44,15 +69,36 @@ func Add(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("added %s -> vault/%s\n", stored, tf.Vault)
+		fmt.Printf("added file %s -> vault/%s\n", stored, tf.Vault)
+	}
+
+	// Resolve patterns right away so the user sees what a newly-added one
+	// matches, consistent with the former `add-pattern` behaviour.
+	if touchedPattern {
+		matches, err := patterns.Resolve(cfg)
+		if err != nil {
+			return err
+		}
+		for _, m := range matches {
+			if m.IsNew {
+				fmt.Printf("  matched (new) %s\n", m.Path)
+			} else {
+				fmt.Printf("  matched       %s (already tracked)\n", m.Path)
+			}
+		}
 	}
 	return config.Save(root, cfg)
 }
 
-// Remove stops tracking a file. Optionally purges the vault blob.
+// Remove accepts a mix of tracked paths and registered patterns. Patterns
+// are removed from [[patterns]]; files are removed from [[files]] and,
+// optionally with --purge, their encrypted blob is also deleted.
+//
+// Removing a pattern does NOT drop the files it already matched. Use
+// individual `remove <path>` calls if you want to also drop those.
 func Remove(args []string) error {
 	if len(args) < 1 {
-		return errors.New("usage: ktraveler remove <path> [--purge]")
+		return errors.New("usage: ktraveler remove <path-or-pattern>... [--purge]")
 	}
 	purge := false
 	var targets []string
@@ -62,6 +108,9 @@ func Remove(args []string) error {
 			continue
 		}
 		targets = append(targets, a)
+	}
+	if len(targets) == 0 {
+		return errors.New("remove: no target given (need at least one path or pattern)")
 	}
 
 	root, err := paths.USBRoot()
@@ -82,6 +131,13 @@ func Remove(args []string) error {
 		if err != nil {
 			return err
 		}
+		if isGlob(raw) {
+			if err := cfg.RemovePattern(stored); err != nil {
+				return err
+			}
+			fmt.Printf("removed pattern %q (already-matched files kept — run `remove <path>` to drop them)\n", stored)
+			continue
+		}
 		removed, err := cfg.RemoveFile(stored)
 		if err != nil {
 			return err
@@ -92,9 +148,9 @@ func Remove(args []string) error {
 			if err := os.Remove(blob); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
 			}
-			fmt.Printf("removed %s and purged vault/%s\n", stored, removed.Vault)
+			fmt.Printf("removed file %s and purged vault/%s\n", stored, removed.Vault)
 		} else {
-			fmt.Printf("removed %s (vault/%s kept — re-run with --purge to delete)\n", stored, removed.Vault)
+			fmt.Printf("removed file %s (vault/%s kept — re-run with --purge to delete)\n", stored, removed.Vault)
 		}
 	}
 
@@ -104,7 +160,7 @@ func Remove(args []string) error {
 	return manifest.Save(root, mf)
 }
 
-// List prints tracked files with their vault filename.
+// List prints tracked files, patterns and hosts for the current vault.
 func List(_ []string) error {
 	root, err := paths.USBRoot()
 	if err != nil {
@@ -115,8 +171,6 @@ func List(_ []string) error {
 		return err
 	}
 
-	// Resolve patterns in memory so the user sees what they currently match.
-	// Read-only command: don't persist auto-additions here.
 	matches, _ := patterns.Resolve(cfg)
 
 	fmt.Printf("vault: %s (%d host(s), %d file(s), %d pattern(s))\n",

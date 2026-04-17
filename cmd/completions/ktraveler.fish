@@ -3,35 +3,44 @@
 # Install:
 #   ktraveler completion fish > ~/.config/fish/completions/ktraveler.fish
 
+# Global flag: --usb / -u takes a directory
+complete -c ktraveler -s u -l usb -x -a '(__fish_complete_directories)' \
+    -d 'point at the vault root (like KTRAVELER_USB)'
+
 # Top-level commands
-complete -c ktraveler -n '__fish_use_subcommand' -a init            -d 'initialize a new USB vault'
-complete -c ktraveler -n '__fish_use_subcommand' -a enroll          -d 'enroll this host (first host only)'
-complete -c ktraveler -n '__fish_use_subcommand' -a enroll-request  -d 'request enrollment of a new host'
-complete -c ktraveler -n '__fish_use_subcommand' -a enroll-approve  -d 'approve pending enrollment requests'
-complete -c ktraveler -n '__fish_use_subcommand' -a add             -d 'track one or more files'
-complete -c ktraveler -n '__fish_use_subcommand' -a remove          -d 'stop tracking one or more files'
-complete -c ktraveler -n '__fish_use_subcommand' -a rm              -d 'alias for remove'
-complete -c ktraveler -n '__fish_use_subcommand' -a add-pattern     -d 'track a glob pattern'
-complete -c ktraveler -n '__fish_use_subcommand' -a remove-pattern  -d 'stop tracking a glob pattern'
-complete -c ktraveler -n '__fish_use_subcommand' -a list            -d 'list hosts, patterns and tracked files'
-complete -c ktraveler -n '__fish_use_subcommand' -a ls              -d 'alias for list'
-complete -c ktraveler -n '__fish_use_subcommand' -a status          -d 'show what sync would do (dry run)'
-complete -c ktraveler -n '__fish_use_subcommand' -a sync            -d 'interactive sync with conflict resolution'
-complete -c ktraveler -n '__fish_use_subcommand' -a push            -d 'force local -> vault'
-complete -c ktraveler -n '__fish_use_subcommand' -a pull            -d 'force vault -> local'
-complete -c ktraveler -n '__fish_use_subcommand' -a verify          -d 'check vault integrity'
-complete -c ktraveler -n '__fish_use_subcommand' -a completion      -d 'emit a shell completion script'
-complete -c ktraveler -n '__fish_use_subcommand' -a help            -d 'print usage'
+complete -c ktraveler -n '__fish_use_subcommand' -a init       -d 'initialize a new USB vault'
+complete -c ktraveler -n '__fish_use_subcommand' -a enroll     -d 'manage host enrollments (list / request / approve)'
+complete -c ktraveler -n '__fish_use_subcommand' -a add        -d 'track files and / or glob patterns'
+complete -c ktraveler -n '__fish_use_subcommand' -a remove     -d 'stop tracking files and / or patterns'
+complete -c ktraveler -n '__fish_use_subcommand' -a rm         -d 'alias for remove'
+complete -c ktraveler -n '__fish_use_subcommand' -a list       -d 'list hosts, patterns and tracked files'
+complete -c ktraveler -n '__fish_use_subcommand' -a ls         -d 'alias for list'
+complete -c ktraveler -n '__fish_use_subcommand' -a status     -d 'show what sync would do (dry run)'
+complete -c ktraveler -n '__fish_use_subcommand' -a sync       -d 'synchronise local and vault'
+complete -c ktraveler -n '__fish_use_subcommand' -a verify     -d 'check vault integrity'
+complete -c ktraveler -n '__fish_use_subcommand' -a completion -d 'emit a shell completion script'
+complete -c ktraveler -n '__fish_use_subcommand' -a help       -d 'print usage'
 
 # init takes a directory argument
-complete -c ktraveler -n '__fish_seen_subcommand_from init'            -x -a '(__fish_complete_directories)'
+complete -c ktraveler -n '__fish_seen_subcommand_from init' -x -a '(__fish_complete_directories)'
 
-# add takes files
-complete -c ktraveler -n '__fish_seen_subcommand_from add'             -F
+# enroll subcommands
+complete -c ktraveler -n '__fish_seen_subcommand_from enroll; and not __fish_seen_subcommand_from list request approve' \
+    -a 'list'    -d 'print enrolled hosts and pending requests'
+complete -c ktraveler -n '__fish_seen_subcommand_from enroll; and not __fish_seen_subcommand_from list request approve' \
+    -a 'request' -d 'register this host (auto-approved if first)'
+complete -c ktraveler -n '__fish_seen_subcommand_from enroll; and not __fish_seen_subcommand_from list request approve' \
+    -a 'approve' -d 'approve a pending request'
+complete -c ktraveler -n '__fish_seen_subcommand_from approve' -l all -d 'approve every pending request'
 
-# remove/rm: files + --purge flag
-complete -c ktraveler -n '__fish_seen_subcommand_from remove rm'       -F
+# add / remove take files
+complete -c ktraveler -n '__fish_seen_subcommand_from add'       -F
+complete -c ktraveler -n '__fish_seen_subcommand_from remove rm' -F
 complete -c ktraveler -n '__fish_seen_subcommand_from remove rm' -l purge -d 'also delete the encrypted blob'
 
-# completion takes a shell name
-complete -c ktraveler -n '__fish_seen_subcommand_from completion'      -x -a 'bash zsh fish'
+# sync flags
+complete -c ktraveler -n '__fish_seen_subcommand_from sync' -l push-only -d 'only propagate local -> vault'
+complete -c ktraveler -n '__fish_seen_subcommand_from sync' -l pull-only -d 'only propagate vault -> local'
+
+# completion <shell>
+complete -c ktraveler -n '__fish_seen_subcommand_from completion' -x -a 'bash zsh fish'

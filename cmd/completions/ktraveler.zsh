@@ -9,50 +9,69 @@
 #   fpath=(~/.zsh/completions $fpath)
 
 _ktraveler() {
-    local -a commands
-    commands=(
-        'init:initialize a new USB vault'
-        'enroll:enroll this host (first host only)'
-        'enroll-request:request enrollment of a new host'
-        'enroll-approve:approve pending enrollment requests'
-        'add:track one or more files'
-        'remove:stop tracking one or more files'
-        'rm:alias for remove'
-        'add-pattern:track a glob pattern'
-        'remove-pattern:stop tracking a glob pattern'
-        'list:list hosts, patterns and tracked files'
-        'ls:alias for list'
-        'status:show what sync would do (dry run)'
-        'sync:interactive sync with conflict resolution'
-        'push:force local -> vault for differing files'
-        'pull:force vault -> local for differing files'
-        'verify:check vault integrity'
-        'completion:emit a shell completion script'
-        'help:print usage'
-    )
+    _arguments -C \
+        '(-u --usb)'{-u,--usb}'[point at the vault root (like KTRAVELER_USB)]:vault path:_directories' \
+        '1:command:->cmd' \
+        '*::arg:->args'
 
-    if (( CURRENT == 2 )); then
+    case "$state" in
+    cmd)
+        local -a commands
+        commands=(
+            'init:initialize a new USB vault'
+            'enroll:manage host enrollments (list / request / approve)'
+            'add:track files and / or glob patterns'
+            'remove:stop tracking files and / or patterns'
+            'rm:alias for remove'
+            'list:list hosts, patterns and tracked files'
+            'ls:alias for list'
+            'status:show what sync would do (dry run)'
+            'sync:synchronise local and vault'
+            'verify:check vault integrity'
+            'completion:emit a shell completion script'
+            'help:print usage'
+        )
         _describe -t commands 'ktraveler command' commands
-        return
-    fi
-
-    case "${words[2]}" in
+        ;;
+    args)
+        case "${words[1]}" in
         init)
             _directories
+            ;;
+        enroll)
+            if (( CURRENT == 2 )); then
+                local -a subs
+                subs=(
+                    'list:print enrolled hosts and pending requests'
+                    'request:register this host (auto-approved if first host)'
+                    'approve:approve a pending request'
+                )
+                _describe -t enroll-sub 'enroll subcommand' subs
+            elif [[ "${words[2]}" == "approve" ]]; then
+                _values 'approve target' '--all[approve every pending request]'
+            fi
             ;;
         add)
             _files
             ;;
         remove|rm)
             _arguments \
-                '--purge[also delete the encrypted blob from the vault]' \
+                '--purge[also delete the encrypted blob]' \
                 '*:file:_files'
             ;;
+        sync)
+            _values 'sync mode' '--push-only[only propagate local -> vault]' '--pull-only[only propagate vault -> local]'
+            ;;
         completion)
-            if (( CURRENT == 3 )); then
+            if (( CURRENT == 2 )); then
                 _values 'shell' 'bash' 'zsh' 'fish'
             fi
             ;;
+        help)
+            _values 'command' init enroll add remove list status sync verify completion
+            ;;
+        esac
+        ;;
     esac
 }
 

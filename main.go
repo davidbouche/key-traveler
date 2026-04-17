@@ -40,107 +40,94 @@ without a full path; the init output suggests a shell-specific snippet.`,
 	},
 	{
 		name:     "enroll",
-		argsHint: "<host-name>",
-		summary:  "enroll THIS host (first host only)",
-		details: `Generate a fresh age X25519 identity at ~/.config/key-traveler/identity.txt
-(mode 0600) and register its public key in config.toml under <host-name>.
-Refuses to run if another host is already enrolled — use enroll-request
-and enroll-approve for additional hosts.`,
-		examples: []string{"ktraveler enroll laptop"},
-		run:      cmd.Enroll,
-	},
-	{
-		name:     "enroll-request",
-		argsHint: "<host-name>",
-		summary:  "request enrollment of a new host",
-		details: `Run this on the NEW host. It generates a local identity and drops a
-JSON request file in pending/ on the USB stick. Then take the stick to an
-already-enrolled host and run enroll-approve.`,
-		examples: []string{"ktraveler enroll-request desktop"},
-		run:      cmd.EnrollRequest,
-	},
-	{
-		name:    "enroll-approve",
-		summary: "approve pending enrollment requests",
-		details: `Run this on an ALREADY-ENROLLED host. It reads every pending/*.json,
-adds the new hosts' pubkeys to config.toml, and re-encrypts every vault
-blob so the new hosts can decrypt. Approved request files are removed
-from pending/ at the end.`,
-		examples: []string{"ktraveler enroll-approve"},
-		run:      cmd.EnrollApprove,
+		argsHint: "<list|request|approve> [args...]",
+		summary:  "manage host enrollments (list / request / approve)",
+		details: `Subcommands:
+
+  enroll list
+      Print enrolled hosts and pending requests.
+
+  enroll request <host-name>
+      Generate this host's local age X25519 identity
+      (~/.config/key-traveler/identity.txt, mode 0600) and register it.
+      If the vault has no hosts yet, the request is auto-approved (first
+      host). Otherwise, a JSON file is dropped in pending/ for approval.
+
+  enroll approve <host-name>
+  enroll approve --all
+      Run on an already-enrolled host. Adds the named (or every) pending
+      request to config.toml and re-encrypts every vault blob so the new
+      host(s) can decrypt. Approved request files are removed from
+      pending/.`,
+		examples: []string{
+			"ktraveler enroll request laptop",
+			"ktraveler enroll list",
+			"ktraveler enroll approve desktop",
+			"ktraveler enroll approve --all",
+		},
+		run: cmd.Enroll,
 	},
 	{
 		name:     "add",
-		argsHint: "<path>...",
-		summary:  "track one or more files",
-		details: `Record each file as tracked in config.toml. Files must already exist.
-Paths under $HOME are stored in ~/… form so they stay portable across
-hosts with the same home layout. Tracking does not push the file — run
-sync or push after.`,
+		argsHint: "<path-or-pattern>...",
+		summary:  "track files and / or glob patterns",
+		details: `Each argument is inspected: if it contains a glob metachar (* or ?) it
+is registered as a pattern ([[patterns]] in config.toml); otherwise it
+is registered as a literal file ([[files]]). The two can be mixed in
+the same call.
+
+Literal files must already exist locally. Paths under $HOME are stored
+in ~/… form so they stay portable across hosts with the same home
+layout.
+
+Quote patterns so your shell does NOT pre-expand them — otherwise you
+only snapshot today's matches, which defeats the purpose. Supported
+glob syntax is filepath.Glob: *, ?, [abc]. Recursive ** is not
+supported — register one pattern per directory if needed.
+
+Newly-added items are not pushed immediately; run ktraveler sync after.`,
 		examples: []string{
-			"ktraveler add ~/.ssh/id_ed25519",
-			"ktraveler add ~/.ssh/config ~/.config/rclone/rclone.conf",
+			"ktraveler add ~/.ssh/config",
+			"ktraveler add '~/.ssh/id_*'",
+			"ktraveler add ~/.barry.toml '~/.config/myapp/*.token'",
 		},
 		run: cmd.Add,
 	},
 	{
 		name:     "remove",
 		aliases:  []string{"rm"},
-		argsHint: "<path>... [--purge]",
-		summary:  "stop tracking one or more files",
-		details: `Drop the file(s) from config.toml and from manifest.json.
+		argsHint: "<path-or-pattern>... [--purge]",
+		summary:  "stop tracking files and / or patterns",
+		details: `Mirrors add: arguments containing * or ? are treated as registered
+patterns and are removed from [[patterns]]; literal paths are removed
+from [[files]] and from manifest.json.
 
 Flags:
-  --purge   also delete the encrypted blob from vault/ (default: keep it).
+  --purge   for file removals, also delete the encrypted blob from
+            vault/. Default: keep the blob so other hosts can still
+            pull one last copy if they need to.
 
-Without --purge the blob is kept so other hosts can still pull a last
-copy if needed. Use --purge when you want the secret fully gone.`,
+Removing a pattern does NOT drop the files it already matched — that
+is deliberate, to avoid silently losing vault content. Use individual
+file removals if you also want to drop those.`,
 		examples: []string{
 			"ktraveler remove ~/.ssh/old_key",
 			"ktraveler remove --purge ~/.ssh/old_key",
+			"ktraveler remove '~/.ssh/id_*'",
 		},
 		run: cmd.Remove,
-	},
-	{
-		name:     "add-pattern",
-		argsHint: "<glob>...",
-		summary:  "track a glob pattern (re-evaluated on every sync)",
-		details: `Register a filepath.Glob pattern. Every sync / push / pull / list /
-status call re-resolves it; newly matching files are auto-added to
-config.toml and pushed on the same run.
-
-Quote the pattern so your shell does NOT pre-expand it — otherwise you
-only snapshot today's matches, which defeats the purpose.
-
-Syntax: *, ?, [abc] are supported. Recursive ** is not — register one
-pattern per directory if you need several.`,
-		examples: []string{
-			"ktraveler add-pattern '~/.ssh/id_*'",
-			"ktraveler add-pattern '~/.config/myapp/*.token'",
-		},
-		run: cmd.AddPattern,
-	},
-	{
-		name:     "remove-pattern",
-		argsHint: "<glob>...",
-		summary:  "stop tracking a pattern",
-		details: `Drop the pattern from config.toml. Files that were already added from
-that pattern stay tracked — use `+"`remove <path>`"+` to drop them
-individually. This is intentional, to avoid silently deleting vault
-content.`,
-		examples: []string{"ktraveler remove-pattern '~/.ssh/id_*'"},
-		run:      cmd.RemovePattern,
 	},
 	{
 		name:    "list",
 		aliases: []string{"ls"},
 		summary: "list hosts, patterns and tracked files",
-		details: `Print the vault summary: enrolled hosts (with their pubkey fingerprint),
-registered glob patterns (with the concrete files each currently matches),
-and every individually-tracked file with its vault blob name.
+		details: `Print the vault summary: enrolled hosts (with their pubkey), registered
+glob patterns (with the concrete files each currently matches, and
+"(new, pending)" for fresh matches not yet persisted), and every
+individually-tracked file with its vault blob name.
 
-Read-only. Patterns are resolved in memory only; run sync to persist new
-matches.`,
+Read-only. Patterns are resolved in memory; run ktraveler sync to
+persist new matches and push them.`,
 		examples: []string{"ktraveler list"},
 		run:      cmd.List,
 	},
@@ -155,49 +142,43 @@ Displays pending pattern matches as "(pending)". Makes no changes.`,
 		run:      cmd.Status,
 	},
 	{
-		name:    "sync",
-		summary: "interactive sync with conflict resolution",
-		details: `Resolve patterns, then for each tracked file:
+		name:     "sync",
+		argsHint: "[--push-only | --pull-only]",
+		summary:  "synchronise local and vault (push + pull, interactive on conflict)",
+		details: `Resolves registered patterns (auto-adding newly-matching files), then
+for each tracked file:
   - in-sync            skipped.
-  - fast-forward push  file pushed automatically.
-  - fast-forward pull  file pulled automatically.
-  - conflict           print a unified diff between local and the
-                       decrypted vault copy, prompt for:
+  - fast-forward push  local newer than vault -> push automatically.
+  - fast-forward pull  vault newer than local -> pull automatically.
+  - conflict           both sides advanced. Print a unified diff between
+                       local and the decrypted vault copy, then prompt:
                          [l] local wins   (push)
                          [v] vault wins   (pull)
                          [s] skip         (no change)
-                         [a] abort        (stop; already-committed
-                                           actions in this session are kept)
+                         [a] abort        (stop; actions already committed
+                                           during this session are kept)
 
-Binary files show size + md5 + dates instead of a diff. The decrypted
-vault copy is written to /dev/shm (RAM) during the conflict display and
-removed right after.`,
-		examples: []string{"ktraveler sync"},
-		run:      cmd.Sync,
-	},
-	{
-		name:    "push",
-		summary: "force local -> vault for every differing file",
-		details: `Like sync, but always prefers the local version. Asks y/N on files
-where the vault would be overwritten (conflicts or pull-pending states);
-plain fast-forward pushes run without asking.`,
-		examples: []string{"ktraveler push"},
-		run:      cmd.Push,
-	},
-	{
-		name:    "pull",
-		summary: "force vault -> local for every differing file",
-		details: `Like sync, but always prefers the vault version. Asks y/N on files
-where local would be overwritten (conflicts or push-pending states);
-plain fast-forward pulls run without asking.
+Flags:
+  --push-only   only propagate local -> vault. Pull-pending files are
+                skipped; push-pending files proceed automatically;
+                conflicts ask for confirmation before overwriting the
+                vault version.
+  --pull-only   symmetric: only propagate vault -> local. Pull-pending
+                files proceed automatically; push-pending and conflicts
+                ask before overwriting the local file.
 
-Restores the recorded Unix mode on every pulled file. Missing parent
-directories are created with mode 0700 so they are safe to hold secrets
-from the moment they exist (SSH and GPG require this). Directories that
-already exist are left untouched. Owner/group are restored only when
-the tool runs as root.`,
-		examples: []string{"ktraveler pull"},
-		run:      cmd.Pull,
+Binary files show size + md5 + dates instead of a textual diff. The
+decrypted vault copy is written to /dev/shm (RAM-backed tmpfs) during
+the conflict display and removed immediately after.
+
+Pulls create missing parent directories with mode 0700 (safe for
+secrets); the file itself is restored with its originally-pushed mode.`,
+		examples: []string{
+			"ktraveler sync",
+			"ktraveler sync --push-only",
+			"ktraveler sync --pull-only",
+		},
+		run: cmd.Sync,
 	},
 	{
 		name:    "verify",

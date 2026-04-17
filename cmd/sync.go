@@ -172,19 +172,38 @@ func Status(_ []string) error {
 	return nil
 }
 
-// Sync is the interactive full flow: auto fast-forwards, prompts on conflicts.
-func Sync(_ []string) error {
-	return runSync(syncModeInteractive)
-}
-
-// Push forces local → vault for any file that differs (with confirmation).
-func Push(_ []string) error {
-	return runSync(syncModePush)
-}
-
-// Pull forces vault → local for any file that differs (with confirmation).
-func Pull(_ []string) error {
-	return runSync(syncModePull)
+// Sync is the single sync entry point.
+//
+//	ktraveler sync              interactive: fast-forward where possible,
+//	                            prompt on conflicts.
+//	ktraveler sync --push-only  only propagate local -> vault; skip pull/conflict
+//	                            cases (confirmation is asked before overwriting
+//	                            a vault version the local host has not seen).
+//	ktraveler sync --pull-only  only propagate vault -> local; skip push/conflict
+//	                            cases (confirmation is asked before overwriting
+//	                            a local version newer than the vault's).
+func Sync(args []string) error {
+	pushOnly, pullOnly := false, false
+	for _, a := range args {
+		switch a {
+		case "--push-only":
+			pushOnly = true
+		case "--pull-only":
+			pullOnly = true
+		default:
+			return fmt.Errorf("sync: unknown argument %q (supported: --push-only, --pull-only)", a)
+		}
+	}
+	// Each flag is a restriction. Applying both is a no-op: the two
+	// restrictions cancel out, so we fall back to the full interactive sync.
+	mode := syncModeInteractive
+	switch {
+	case pushOnly && !pullOnly:
+		mode = syncModePush
+	case pullOnly && !pushOnly:
+		mode = syncModePull
+	}
+	return runSync(mode)
 }
 
 type syncMode int
@@ -213,7 +232,7 @@ func runSync(mode syncMode) error {
 		return err
 	}
 	if cfg.HostByName(me) == nil {
-		return fmt.Errorf("this host (%q) is not enrolled on the vault; run `ktraveler enroll` or `enroll-request`", me)
+		return fmt.Errorf("this host (%q) is not enrolled on the vault; run `ktraveler enroll request <name>`", me)
 	}
 
 	// Expand patterns into concrete [[files]] entries before iterating so
