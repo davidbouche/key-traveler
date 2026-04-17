@@ -54,6 +54,31 @@ in:
    launched directly from the stick);
 3. `/media/$USER/*` and `/run/media/$USER/*`.
 
+## Shell completion
+
+The binary can emit its own completion script for bash, zsh and fish:
+
+```sh
+# bash — persist (preferred if your ~/.bashrc.d/ is already sourced)
+ktraveler completion bash > ~/.bashrc.d/ktraveler-completion.sh
+
+# bash — one-shot for the current shell
+source <(ktraveler completion bash)
+
+# zsh (any directory in $fpath works; example with a user-local one)
+mkdir -p ~/.zsh/completions
+ktraveler completion zsh > ~/.zsh/completions/_ktraveler
+# then add to ~/.zshrc, before `compinit`:
+#   fpath=(~/.zsh/completions $fpath)
+
+# fish
+ktraveler completion fish > ~/.config/fish/completions/ktraveler.fish
+```
+
+Completion covers the command list, the `--purge` flag on `remove`, file
+and directory completion for arguments that take paths (`init`, `add`,
+`remove`), and the three valid shells on `completion`.
+
 ## Commands
 
 | Command                               | Action |
@@ -72,6 +97,7 @@ in:
 | `ktraveler push`                      | Force local → vault for every differing file (asks for confirmation on conflicts). |
 | `ktraveler pull`                      | Force vault → local for every differing file (asks for confirmation on conflicts). |
 | `ktraveler verify`                    | Integrity check: every `.age` blob decrypts and its md5 matches the manifest. |
+| `ktraveler completion <shell>`        | Emit a completion script for `bash`, `zsh` or `fish`. |
 
 ## Typical setup
 

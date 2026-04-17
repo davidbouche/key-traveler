@@ -24,6 +24,7 @@ Usage:
   ktraveler push                         force local → vault (with confirmation on conflicts)
   ktraveler pull                         force vault → local (with confirmation on conflicts)
   ktraveler verify                       check vault integrity (decrypt + md5)
+  ktraveler completion <shell>           emit a completion script (bash, zsh or fish)
 
 Set KTRAVELER_USB to point at the vault root if auto-detection fails.
 `
@@ -64,6 +65,8 @@ func main() {
 		err = cmd.Pull(args)
 	case "verify":
 		err = cmd.Verify(args)
+	case "completion":
+		err = cmd.Completion(args)
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 		return
