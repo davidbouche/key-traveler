@@ -1,0 +1,17 @@
+# Compiled binary
+/ktraveler
+/ktraveler-strip
+
+# Editor scratch
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local test vaults / sandboxes
+/tmp-*/
+/sandbox/
+
+# Go test artifacts
+coverage.out
+*.test
