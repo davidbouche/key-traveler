@@ -64,7 +64,9 @@ in:
 | `ktraveler enroll-approve`            | On an *already enrolled* host: accept pending requests and **re-encrypt the whole vault** for the new hosts. |
 | `ktraveler add <path>…`               | Track one or more files (paths are stored as `~/…` when under `$HOME`). |
 | `ktraveler remove <path>… [--purge]`  | Stop tracking; `--purge` also deletes the encrypted blob. |
-| `ktraveler list`                      | List enrolled hosts and tracked files. |
+| `ktraveler add-pattern <glob>…`       | Track a glob pattern — resolved on every sync, new matches auto-added. |
+| `ktraveler remove-pattern <glob>…`    | Stop tracking a pattern; already-matched files stay (use `remove` to drop them). |
+| `ktraveler list`                      | List enrolled hosts, patterns and tracked files. |
 | `ktraveler status`                    | Show what `sync` would do (dry run, no changes). |
 | `ktraveler sync`                      | Interactive sync: automatic fast-forward, prompt on conflicts. |
 | `ktraveler push`                      | Force local → vault for every differing file (asks for confirmation on conflicts). |
@@ -96,6 +98,39 @@ ktraveler enroll-approve        # re-encrypts the vault to include desktop
 # 3) back on the desktop
 ktraveler pull                  # retrieves every secret, permissions restored
 ```
+
+### Tracking files by pattern
+
+To stop thinking about `add` every time you create a new key, register a glob
+pattern — every sync-like command re-evaluates it and auto-adds any new
+matches to the config.
+
+```sh
+ktraveler add-pattern '~/.ssh/id_*'
+# -> matches id_ed25519, id_ed25519.pub, id_rsa, id_rsa.pub …
+
+# Later, after generating a new pair:
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_work
+ktraveler sync
+# picked up pattern "~/.ssh/id_*" → ~/.ssh/id_ed25519_work
+# picked up pattern "~/.ssh/id_*" → ~/.ssh/id_ed25519_work.pub
+#   push     ~/.ssh/id_ed25519_work
+#   push     ~/.ssh/id_ed25519_work.pub
+```
+
+Quote the pattern so your shell doesn't pre-expand it:
+
+```sh
+ktraveler add-pattern '~/.ssh/id_*'      # good — pattern stored literally
+ktraveler add-pattern ~/.ssh/id_*        # shell expands NOW; you only snapshot today's matches
+```
+
+Syntax follows Go's `filepath.Glob` (`*`, `?`, `[abc]`). Recursive `**` is
+not supported — add one pattern per directory if needed.
+
+`remove-pattern` drops the pattern but leaves the files it already matched
+in place, so you don't lose history by mistake. Use `remove <path>` to drop
+an individual file.
 
 ### Day-to-day usage
 
@@ -183,6 +218,10 @@ name = "laptop"
 pubkey = "age1…"
 enrolled_at = 2026-04-17T12:56:23Z
 
+[[patterns]]
+pattern = "~/.ssh/id_*"
+added_at = 2026-04-17T12:56:28Z
+
 [[files]]
 path = "~/.ssh/id_ed25519"
 vault = "ssh-id_ed25519.age"
@@ -237,6 +276,7 @@ internal/
   manifest/                   JSON (atomic read/write)
   vault/                      age encryption, re-encrypt-all
   identity/                   local private key, hostname
+  patterns/                   glob expansion, auto-add of new matches
   paths/                      ~ expansion, $HOME contraction, USB detection, WriteAtomic
   hash/                       streaming md5 + binary detection
   diff/                       unified diff via /usr/bin/diff, prompts, tmpfs helpers

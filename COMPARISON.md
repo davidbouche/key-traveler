@@ -17,7 +17,9 @@ Key-traveler was built around a specific combination of constraints:
   server, no peer-to-peer networking.
 - **Per-file tracking with original paths and Unix permissions.** Secrets
   are restored in place (e.g. `~/.ssh/id_ed25519` with mode `0600`), not
-  inside a vault tree.
+  inside a vault tree. Glob patterns (`~/.ssh/id_*`) are supported and
+  re-evaluated on every sync so newly created keys are picked up
+  automatically.
 - **Per-host encryption keys.** Each machine holds its own age X25519
   private key; the USB stick itself never carries any private key. Losing
   the stick exposes nothing.

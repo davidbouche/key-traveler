@@ -18,6 +18,7 @@ import (
 	"github.com/david/key-traveler/internal/identity"
 	"github.com/david/key-traveler/internal/manifest"
 	"github.com/david/key-traveler/internal/paths"
+	"github.com/david/key-traveler/internal/patterns"
 	"github.com/david/key-traveler/internal/vault"
 )
 
@@ -142,6 +143,16 @@ func Status(_ []string) error {
 		return err
 	}
 
+	// Status is read-only on disk, but resolves patterns in memory so their
+	// pending matches show up in the report.
+	matches, err := patterns.Resolve(cfg)
+	if err != nil {
+		return err
+	}
+	for _, m := range patterns.NewlyAdded(matches) {
+		fmt.Printf("  (pending) pattern %q → %s\n", m.Pattern, m.Path)
+	}
+
 	fmt.Printf("host: %s   vault: %s\n", me, root)
 	if len(cfg.Files) == 0 {
 		fmt.Println("no files tracked.")
@@ -203,6 +214,22 @@ func runSync(mode syncMode) error {
 	}
 	if cfg.HostByName(me) == nil {
 		return fmt.Errorf("this host (%q) is not enrolled on the vault; run `ktraveler enroll` or `enroll-request`", me)
+	}
+
+	// Expand patterns into concrete [[files]] entries before iterating so
+	// newly matching files get picked up automatically on every sync.
+	matches, err := patterns.Resolve(cfg)
+	if err != nil {
+		return err
+	}
+	newMatches := patterns.NewlyAdded(matches)
+	if len(newMatches) > 0 {
+		for _, m := range newMatches {
+			fmt.Printf("  picked up pattern %q → %s\n", m.Pattern, m.Path)
+		}
+		if err := config.Save(root, cfg); err != nil {
+			return err
+		}
 	}
 
 	id, err := identity.Load()

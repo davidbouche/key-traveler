@@ -25,9 +25,10 @@ const (
 )
 
 type Config struct {
-	Vault   VaultMeta   `toml:"vault"`
-	Hosts   []Host      `toml:"hosts"`
-	Files   []TrackedFile `toml:"files"`
+	Vault    VaultMeta     `toml:"vault"`
+	Hosts    []Host        `toml:"hosts"`
+	Patterns []Pattern     `toml:"patterns"`
+	Files    []TrackedFile `toml:"files"`
 }
 
 type VaultMeta struct {
@@ -44,6 +45,13 @@ type TrackedFile struct {
 	// Path stored in ~/... form when under home.
 	Path  string `toml:"path"`
 	Vault string `toml:"vault"`
+}
+
+// Pattern is a glob expression (filepath.Glob syntax) that is re-evaluated on
+// every sync-like command. Newly matching files are auto-added to [[files]].
+type Pattern struct {
+	Pattern string    `toml:"pattern"`
+	AddedAt time.Time `toml:"added_at,omitempty"`
 }
 
 // Load reads config.toml from the USB root.
@@ -133,6 +141,40 @@ func (c *Config) AddFile(storedPath string) (*TrackedFile, error) {
 	tf := TrackedFile{Path: storedPath, Vault: vault}
 	c.Files = append(c.Files, tf)
 	return &c.Files[len(c.Files)-1], nil
+}
+
+// FindPattern returns the Pattern matching the expression, or nil.
+func (c *Config) FindPattern(expr string) *Pattern {
+	for i := range c.Patterns {
+		if c.Patterns[i].Pattern == expr {
+			return &c.Patterns[i]
+		}
+	}
+	return nil
+}
+
+// AddPattern appends a glob pattern; rejects duplicates.
+func (c *Config) AddPattern(expr string) (*Pattern, error) {
+	if expr == "" {
+		return nil, errors.New("pattern is empty")
+	}
+	if existing := c.FindPattern(expr); existing != nil {
+		return existing, fmt.Errorf("pattern %q already tracked", expr)
+	}
+	c.Patterns = append(c.Patterns, Pattern{Pattern: expr, AddedAt: time.Now().UTC()})
+	return &c.Patterns[len(c.Patterns)-1], nil
+}
+
+// RemovePattern drops a pattern by expression. Literal [[files]] already
+// resolved from this pattern are left alone — use `remove` to drop them.
+func (c *Config) RemovePattern(expr string) error {
+	for i, p := range c.Patterns {
+		if p.Pattern == expr {
+			c.Patterns = append(c.Patterns[:i], c.Patterns[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("pattern %q not tracked", expr)
 }
 
 // RemoveFile drops a tracked entry. Returns the removed entry for callers that

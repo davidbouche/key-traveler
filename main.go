@@ -16,7 +16,9 @@ Usage:
   ktraveler enroll-approve               approve pending requests (from an existing host)
   ktraveler add <path>...                track file(s) — use ~ for home-relative paths
   ktraveler remove <path>... [--purge]   stop tracking file(s)
-  ktraveler list                         list hosts and tracked files
+  ktraveler add-pattern <glob>...        track a glob pattern — resolved on every sync
+  ktraveler remove-pattern <glob>...     stop tracking a pattern (already-matched files kept)
+  ktraveler list                         list hosts, patterns and tracked files
   ktraveler status                       show what sync would do (dry run)
   ktraveler sync                         interactive sync with conflict resolution
   ktraveler push                         force local → vault (with confirmation on conflicts)
@@ -46,6 +48,10 @@ func main() {
 		err = cmd.Add(args)
 	case "remove", "rm":
 		err = cmd.Remove(args)
+	case "add-pattern":
+		err = cmd.AddPattern(args)
+	case "remove-pattern":
+		err = cmd.RemovePattern(args)
 	case "list", "ls":
 		err = cmd.List(args)
 	case "status":

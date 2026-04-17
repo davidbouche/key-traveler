@@ -10,6 +10,7 @@ import (
 	"github.com/david/key-traveler/internal/diff"
 	"github.com/david/key-traveler/internal/manifest"
 	"github.com/david/key-traveler/internal/paths"
+	"github.com/david/key-traveler/internal/patterns"
 )
 
 // Add declares a file to be tracked. It does not push the file; run sync/push after.
@@ -114,7 +115,13 @@ func List(_ []string) error {
 		return err
 	}
 
-	fmt.Printf("vault: %s (%d host(s), %d file(s))\n", root, len(cfg.Hosts), len(cfg.Files))
+	// Resolve patterns in memory so the user sees what they currently match.
+	// Read-only command: don't persist auto-additions here.
+	matches, _ := patterns.Resolve(cfg)
+
+	fmt.Printf("vault: %s (%d host(s), %d file(s), %d pattern(s))\n",
+		root, len(cfg.Hosts), len(cfg.Files), len(cfg.Patterns))
+
 	if len(cfg.Hosts) == 0 {
 		fmt.Println("no hosts enrolled yet.")
 	} else {
@@ -123,6 +130,23 @@ func List(_ []string) error {
 			fmt.Printf("  - %s (%s)\n", h.Name, diff.ShortPath(h.Pubkey))
 		}
 	}
+
+	if len(cfg.Patterns) > 0 {
+		fmt.Println("patterns:")
+		for _, p := range cfg.Patterns {
+			fmt.Printf("  - %q\n", p.Pattern)
+			for _, m := range matches {
+				if m.Pattern == p.Pattern {
+					tag := ""
+					if m.IsNew {
+						tag = "  (new, pending)"
+					}
+					fmt.Printf("      · %s%s\n", m.Path, tag)
+				}
+			}
+		}
+	}
+
 	if len(cfg.Files) == 0 {
 		fmt.Println("no files tracked.")
 		return nil
