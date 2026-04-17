@@ -1,4 +1,4 @@
-module github.com/david/key-traveler
+module github.com/davidbouche/key-traveler
 
 go 1.25.9
 

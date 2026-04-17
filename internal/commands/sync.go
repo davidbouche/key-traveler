@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"errors"
@@ -12,14 +12,14 @@ import (
 
 	"filippo.io/age"
 
-	"github.com/david/key-traveler/internal/config"
-	"github.com/david/key-traveler/internal/diff"
-	"github.com/david/key-traveler/internal/hash"
-	"github.com/david/key-traveler/internal/identity"
-	"github.com/david/key-traveler/internal/manifest"
-	"github.com/david/key-traveler/internal/paths"
-	"github.com/david/key-traveler/internal/patterns"
-	"github.com/david/key-traveler/internal/vault"
+	"github.com/davidbouche/key-traveler/internal/config"
+	"github.com/davidbouche/key-traveler/internal/diff"
+	"github.com/davidbouche/key-traveler/internal/hash"
+	"github.com/davidbouche/key-traveler/internal/identity"
+	"github.com/davidbouche/key-traveler/internal/manifest"
+	"github.com/davidbouche/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/patterns"
+	"github.com/davidbouche/key-traveler/internal/vault"
 )
 
 // action describes what sync decided for a file.

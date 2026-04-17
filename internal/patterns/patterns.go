@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/david/key-traveler/internal/config"
-	"github.com/david/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/config"
+	"github.com/davidbouche/key-traveler/internal/paths"
 )
 
 // Match is one concrete file that resolved from a pattern.

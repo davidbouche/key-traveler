@@ -38,12 +38,30 @@ an interactive resolution shows a diff and asks which version to keep.
 Requirements: Go 1.25+ to build, `diff` (package `diffutils`) available on
 the target machines for the conflict diff view.
 
+### From the Go module proxy (no git clone needed)
+
 ```sh
-git clone <repo> key-traveler
+go install github.com/davidbouche/key-traveler/cmd/ktraveler@latest
+```
+
+This downloads, builds, and installs the `ktraveler` binary into
+`$(go env GOBIN)` (or `$(go env GOPATH)/bin` if `GOBIN` is unset). Make
+sure that directory is on your `$PATH`. `@latest` resolves to the tip of
+the `main` branch via a Go pseudo-version; replace with a tag (e.g.
+`@v0.1.0`) to pin a specific release.
+
+### From a local clone
+
+```sh
+git clone https://github.com/davidbouche/key-traveler.git
 cd key-traveler
 make build-strip        # produces ./ktraveler (~3.5 MiB)
 make install-usb USB=/media/<user>/<label>
 ```
+
+The first form is the usual workflow on each computer that will sync
+with the stick; the second form is what you use once to build the
+binary that gets copied onto the stick itself.
 
 The binary and the vault data live side by side at the root of the USB
 stick. The tool locates the stick automatically by looking for `config.toml`

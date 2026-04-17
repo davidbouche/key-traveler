@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"encoding/json"
@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/david/key-traveler/internal/config"
-	"github.com/david/key-traveler/internal/identity"
-	"github.com/david/key-traveler/internal/paths"
-	"github.com/david/key-traveler/internal/vault"
+	"github.com/davidbouche/key-traveler/internal/config"
+	"github.com/davidbouche/key-traveler/internal/identity"
+	"github.com/davidbouche/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/vault"
 )
 
 // Enroll is the master dispatcher for the enroll subcommand tree.

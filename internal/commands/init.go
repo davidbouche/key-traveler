@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/david/key-traveler/internal/config"
-	"github.com/david/key-traveler/internal/manifest"
+	"github.com/davidbouche/key-traveler/internal/config"
+	"github.com/davidbouche/key-traveler/internal/manifest"
 )
 
 // Init bootstraps a new USB root at the given directory.

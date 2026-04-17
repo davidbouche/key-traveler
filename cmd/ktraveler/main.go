@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/david/key-traveler/cmd"
+	"github.com/davidbouche/key-traveler/internal/commands"
 )
 
 type command struct {
@@ -36,7 +36,7 @@ without a full path; the init output suggests a shell-specific snippet.`,
 			"ktraveler init /media/david/KEY-TRAVELER",
 			"ktraveler init /run/media/david/ktraveler",
 		},
-		run: cmd.Init,
+		run: commands.Init,
 	},
 	{
 		name:     "enroll",
@@ -65,7 +65,7 @@ without a full path; the init output suggests a shell-specific snippet.`,
 			"ktraveler enroll approve desktop",
 			"ktraveler enroll approve --all",
 		},
-		run: cmd.Enroll,
+		run: commands.Enroll,
 	},
 	{
 		name:     "add",
@@ -91,7 +91,7 @@ Newly-added items are not pushed immediately; run ktraveler sync after.`,
 			"ktraveler add '~/.ssh/id_*'",
 			"ktraveler add ~/.barry.toml '~/.config/myapp/*.token'",
 		},
-		run: cmd.Add,
+		run: commands.Add,
 	},
 	{
 		name:     "remove",
@@ -115,7 +115,7 @@ file removals if you also want to drop those.`,
 			"ktraveler remove --purge ~/.ssh/old_key",
 			"ktraveler remove '~/.ssh/id_*'",
 		},
-		run: cmd.Remove,
+		run: commands.Remove,
 	},
 	{
 		name:    "list",
@@ -129,7 +129,7 @@ individually-tracked file with its vault blob name.
 Read-only. Patterns are resolved in memory; run ktraveler sync to
 persist new matches and push them.`,
 		examples: []string{"ktraveler list"},
-		run:      cmd.List,
+		run:      commands.List,
 	},
 	{
 		name:    "status",
@@ -139,7 +139,7 @@ manifest's last-push record and this host's last-pull record. Prints a
 per-file action label: in-sync, push, pull, conflict, or missing.
 Displays pending pattern matches as "(pending)". Makes no changes.`,
 		examples: []string{"ktraveler status"},
-		run:      cmd.Status,
+		run:      commands.Status,
 	},
 	{
 		name:     "sync",
@@ -178,7 +178,7 @@ secrets); the file itself is restored with its originally-pushed mode.`,
 			"ktraveler sync --push-only",
 			"ktraveler sync --pull-only",
 		},
-		run: cmd.Sync,
+		run: commands.Sync,
 	},
 	{
 		name:    "verify",
@@ -187,7 +187,7 @@ secrets); the file itself is restored with its originally-pushed mode.`,
 local identity and (2) has an md5 that matches manifest.last_push.md5.
 Reports ok / FAIL per file and exits non-zero on any failure.`,
 		examples: []string{"ktraveler verify"},
-		run:      cmd.Verify,
+		run:      commands.Verify,
 	},
 	{
 		name:     "completion",
@@ -201,7 +201,7 @@ names on completion itself.`,
 			"ktraveler completion bash > ~/.bashrc.d/ktraveler-completion.sh",
 			"source <(ktraveler completion bash)",
 		},
-		run: cmd.Completion,
+		run: commands.Completion,
 	},
 }
 

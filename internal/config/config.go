@@ -11,7 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/david/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/paths"
 )
 
 const (

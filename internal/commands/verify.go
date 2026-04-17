@@ -1,15 +1,15 @@
-package cmd
+package commands
 
 import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/david/key-traveler/internal/config"
-	"github.com/david/key-traveler/internal/hash"
-	"github.com/david/key-traveler/internal/identity"
-	"github.com/david/key-traveler/internal/manifest"
-	"github.com/david/key-traveler/internal/paths"
-	"github.com/david/key-traveler/internal/vault"
+	"github.com/davidbouche/key-traveler/internal/config"
+	"github.com/davidbouche/key-traveler/internal/hash"
+	"github.com/davidbouche/key-traveler/internal/identity"
+	"github.com/davidbouche/key-traveler/internal/manifest"
+	"github.com/davidbouche/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/vault"
 )
 
 // Verify checks every vault blob: can we decrypt it, and does its md5 match

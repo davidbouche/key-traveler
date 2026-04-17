@@ -1,4 +1,4 @@
-package cmd
+package commands
 
 import (
 	"errors"
@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/david/key-traveler/internal/config"
-	"github.com/david/key-traveler/internal/diff"
-	"github.com/david/key-traveler/internal/manifest"
-	"github.com/david/key-traveler/internal/paths"
-	"github.com/david/key-traveler/internal/patterns"
+	"github.com/davidbouche/key-traveler/internal/config"
+	"github.com/davidbouche/key-traveler/internal/diff"
+	"github.com/davidbouche/key-traveler/internal/manifest"
+	"github.com/davidbouche/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/patterns"
 )
 
 // isGlob decides whether a user-supplied argument should be treated as a

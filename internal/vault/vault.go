@@ -9,7 +9,7 @@ import (
 
 	"filippo.io/age"
 
-	"github.com/david/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/paths"
 )
 
 // EncryptToFile encrypts plaintext to dst, recipients is a list of age pubkey strings.

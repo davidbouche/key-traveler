@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/david/key-traveler/internal/paths"
+	"github.com/davidbouche/key-traveler/internal/paths"
 )
 
 const FileName = "manifest.json"
