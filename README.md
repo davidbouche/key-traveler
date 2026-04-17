@@ -49,10 +49,21 @@ The binary and the vault data live side by side at the root of the USB
 stick. The tool locates the stick automatically by looking for `config.toml`
 in:
 
-1. `$KTRAVELER_USB` if set;
-2. the directory of the running binary (the normal case — `ktraveler`
+1. the `--usb <path>` (or `-u <path>`) command-line flag if given;
+2. `$KTRAVELER_USB` if set;
+3. the directory of the running binary (the normal case — `ktraveler`
    launched directly from the stick);
-3. `/media/$USER/*` and `/run/media/$USER/*`.
+4. `/media/$USER/*` and `/run/media/$USER/*`.
+
+The `--usb` flag can appear anywhere on the command line and accepts
+`--usb=<path>` / `-u=<path>` forms too. Useful when the stick is at an
+unusual mount point or when you want to override `$KTRAVELER_USB` for a
+single invocation:
+
+```sh
+ktraveler --usb /mnt/backup-vault sync
+ktraveler list -u=/mnt/backup-vault
+```
 
 ## Shell completion
 

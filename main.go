@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -226,9 +227,14 @@ names on completion itself.`,
 const usagePreamble = `ktraveler — transport encrypted secrets on a USB stick.
 
 Usage:
-  ktraveler <command> [args...]
+  ktraveler [global flags] <command> [args...]
   ktraveler <command> --help           show detailed help for a command
   ktraveler help [<command>]           same, alternate form
+
+Global flags (accepted anywhere on the command line):
+  -u, --usb <path>   point at the vault root for this invocation;
+                     equivalent to KTRAVELER_USB=<path>. Accepts
+                     --usb=<path> and -u=<path> too.
 
 Commands:
 `
@@ -244,13 +250,19 @@ Environment:
 `
 
 func main() {
-	if len(os.Args) < 2 {
+	args, err := extractGlobalFlags(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(2)
+	}
+
+	if len(args) == 0 {
 		printTopUsage(os.Stdout)
 		os.Exit(2)
 	}
 
-	first := os.Args[1]
-	rest := os.Args[2:]
+	first := args[0]
+	rest := args[1:]
 
 	// `ktraveler help` or `ktraveler -h/--help`.
 	if first == "-h" || first == "--help" || first == "help" {
@@ -286,6 +298,38 @@ func main() {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
+}
+
+// extractGlobalFlags pulls any -u/--usb occurrences out of args (in any
+// position) and sets KTRAVELER_USB accordingly, returning the remaining
+// arguments ready for normal dispatch. Accepts: "-u PATH", "--usb PATH",
+// "-u=PATH", "--usb=PATH".
+func extractGlobalFlags(args []string) ([]string, error) {
+	out := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "-u" || a == "--usb":
+			if i+1 >= len(args) {
+				return nil, errors.New(a + " requires a path")
+			}
+			if err := os.Setenv("KTRAVELER_USB", args[i+1]); err != nil {
+				return nil, err
+			}
+			i++
+		case strings.HasPrefix(a, "--usb="):
+			if err := os.Setenv("KTRAVELER_USB", strings.TrimPrefix(a, "--usb=")); err != nil {
+				return nil, err
+			}
+		case strings.HasPrefix(a, "-u="):
+			if err := os.Setenv("KTRAVELER_USB", strings.TrimPrefix(a, "-u=")); err != nil {
+				return nil, err
+			}
+		default:
+			out = append(out, a)
+		}
+	}
+	return out, nil
 }
 
 func lookup(name string) *command {
