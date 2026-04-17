@@ -209,6 +209,11 @@ When pushing, `key-traveler` records in the manifest:
 When pulling, the mode is restored. The user/group are restored only when
 the tool runs as root (not needed for user-owned secrets).
 
+Missing parent directories are created automatically with mode `0700`, so
+`~/.ssh/` on a fresh machine comes out restrictive enough for SSH to
+accept keys placed inside. Already-existing directories are never
+modified — ktraveler only creates what is missing.
+
 ## USB layout
 
 ```

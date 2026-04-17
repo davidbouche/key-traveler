@@ -426,7 +426,12 @@ func doPull(me string, d *decision, id age.Identity, mf *manifest.Manifest) erro
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(d.localPath), 0o755); err != nil {
+	// Create any missing parent directories with 0700: whatever holds our
+	// secrets must not be accessible to group/other (SSH and GPG enforce
+	// this, and it is the safe default for anything else). MkdirAll leaves
+	// already-existing directories untouched, so this does not loosen or
+	// tighten dirs the user already manages.
+	if err := os.MkdirAll(filepath.Dir(d.localPath), 0o700); err != nil {
 		return err
 	}
 

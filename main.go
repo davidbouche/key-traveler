@@ -190,8 +190,11 @@ plain fast-forward pushes run without asking.`,
 where local would be overwritten (conflicts or push-pending states);
 plain fast-forward pulls run without asking.
 
-Restores the recorded Unix mode on every pulled file. Owner/group are
-restored only when the tool runs as root.`,
+Restores the recorded Unix mode on every pulled file. Missing parent
+directories are created with mode 0700 so they are safe to hold secrets
+from the moment they exist (SSH and GPG require this). Directories that
+already exist are left untouched. Owner/group are restored only when
+the tool runs as root.`,
 		examples: []string{"ktraveler pull"},
 		run:      cmd.Pull,
 	},
