@@ -109,7 +109,7 @@ func enrollRequest(args []string) error {
 		}
 	}
 
-	_, pub, err := identity.Generate()
+	_, pub, err := identity.LoadOrGenerate()
 	if err != nil {
 		return err
 	}

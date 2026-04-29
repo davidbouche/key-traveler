@@ -6,11 +6,11 @@ several Linux machines using a USB stick.
 Design principle: the USB stick never holds any private key — only `age`
 blobs encrypted for *every* enrolled host. Each host keeps its own decryption
 key in `~/.config/key-traveler/identity.txt`. Losing the USB stick therefore
-exposes no secret.
+exposes no file content.
 
 An unencrypted `manifest.json`, also on the stick, acts as the source of
 truth for detecting divergences between the local copy of a file and the
-copy on the stick (md5 + mtime + permissions). When a conflict is detected,
+copy on the stick (SHA-256 hash + mtime + permissions). When a conflict is detected,
 an interactive resolution shows a diff and asks which version to keep.
 
 > Looking for something similar? See [COMPARISON.md](COMPARISON.md) for how
@@ -24,8 +24,12 @@ an interactive resolution shows a diff and asks which version to keep.
 - **One key per host**: every machine owns its own X25519 key pair stored in
   `~/.config/key-traveler/identity.txt` with `0600` permissions. The tool
   refuses to run if these permissions have been loosened.
-- **Stolen USB stick**: no secret is exposed, because the private key
-  required to decrypt is not on the stick.
+- **Stolen USB stick**: no file content is exposed, because the private key
+  required to decrypt is not on the stick. However, `config.toml` and
+  `manifest.json` are stored in plaintext — an attacker with physical access
+  can see hostnames, tracked file paths, permissions, timestamps and file
+  sizes. This is a deliberate trade-off: keeping the manifest readable
+  enables offline conflict detection without requiring decryption.
 - **Revoking a host**: remove its pubkey from `config.toml` and re-encrypt
   the whole vault. *(No dedicated command in v1 — achievable by hand plus a
   second `enroll-approve` run.)*
@@ -122,9 +126,9 @@ and directory completion for arguments that take paths (`init`, `add`,
 | `ktraveler list`                          | List enrolled hosts, patterns (with current matches) and tracked files. |
 | `ktraveler status`                        | Show what `sync` would do (dry run, no changes). |
 | `ktraveler sync`                          | Interactive sync: automatic fast-forward, prompt on conflicts. |
-| `ktraveler sync --push-only`              | Only propagate local → vault; skip pull-pending files. |
-| `ktraveler sync --pull-only`              | Only propagate vault → local; skip push-pending files. |
-| `ktraveler verify`                        | Integrity check: every `.age` blob decrypts and its md5 matches the manifest. |
+| `ktraveler sync --push-only`              | Only propagate local → vault; pull-pending and conflict files prompt before force-pushing. |
+| `ktraveler sync --pull-only`              | Only propagate vault → local; push-pending and conflict files prompt before force-pulling. |
+| `ktraveler verify`                        | Integrity check: every `.age` blob decrypts and its hash matches the manifest. |
 | `ktraveler completion <shell>`            | Emit a completion script for `bash`, `zsh` or `fish`. |
 
 ## Typical setup
@@ -182,7 +186,10 @@ ktraveler add ~/.ssh/id_*        # shell expands NOW; you only snapshot today's 
 ```
 
 Syntax follows Go's `filepath.Glob` (`*`, `?`, `[abc]`). Recursive `**` is
-not supported — add one pattern per directory if needed.
+not supported — add one pattern per directory if needed. Note: arguments are
+auto-detected as patterns only when they contain `*` or `?`. Bracket-class
+expressions like `[abc]` alone are treated as literal paths to avoid false
+positives with filenames such as `foo[1].txt`.
 
 `remove '~/.ssh/id_*'` drops the pattern but leaves the files it already
 matched in place, so you don't lose history by mistake. Use
@@ -220,7 +227,7 @@ For every tracked file, `status` and `sync` compare three anchors:
 | ≠ `pulls`    | ≠ `last_push`   | —              | **conflict** → interactive prompt        |
 
 On a conflict, the tool prints a unified diff between the local copy and the
-decrypted vault copy (for text files), or a size/md5/date summary (for
+decrypted vault copy (for text files), or a size/hash/date summary (for
 binaries), then prompts for:
 
 - `l` — **local** wins: the local version is encrypted and pushed;
@@ -235,7 +242,7 @@ When pushing, `key-traveler` records in the manifest:
 
 - the Unix mode (e.g. `0600` for an SSH key);
 - the owning user and group names;
-- the size, mtime and md5.
+- the size, mtime and SHA-256 hash.
 
 When pulling, the mode is restored. The user/group are restored only when
 the tool runs as root (not needed for user-owned secrets).
@@ -251,7 +258,7 @@ modified — ktraveler only creates what is missing.
 /media/david/SECRETS/
 ├── ktraveler              # statically linked Go binary
 ├── config.toml            # tracked files + host pubkeys
-├── manifest.json          # md5 + mtime + mode + owner + per-host history
+├── manifest.json          # hash + mtime + mode + owner + per-host history
 ├── pending/               # outstanding enroll-request files
 └── vault/
     ├── ssh-id_ed25519.age
@@ -340,7 +347,7 @@ internal/
   identity/                   local private key, hostname
   patterns/                   glob expansion, auto-add of new matches
   paths/                      ~ expansion, $HOME contraction, USB detection, WriteAtomic
-  hash/                       streaming md5 + binary detection
+  hash/                       streaming SHA-256 + binary detection
   diff/                       unified diff via /usr/bin/diff, prompts, tmpfs helpers
 ```
 

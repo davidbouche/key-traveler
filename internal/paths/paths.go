@@ -98,12 +98,38 @@ func hasConfig(dir string) bool {
 	return err == nil && !fi.IsDir()
 }
 
-// WriteAtomic writes data to path by first writing to path.tmp then renaming.
-// mode sets the final permission bits on the file.
+// WriteAtomic writes data to path via a temp file in the same directory,
+// fsyncs to disk, then renames. The temp file is cleaned up on error.
 func WriteAtomic(path string, data []byte, mode os.FileMode) error {
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, mode); err != nil {
+	dir := filepath.Dir(path)
+	f, err := os.CreateTemp(dir, ".ktraveler-*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	tmp := f.Name()
+	defer func() {
+		if tmp != "" {
+			os.Remove(tmp)
+		}
+	}()
+
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp, mode); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	tmp = "" // rename succeeded — disarm cleanup
+	return nil
 }

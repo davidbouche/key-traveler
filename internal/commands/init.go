@@ -53,7 +53,7 @@ func printPostInit(root string) {
 
 	fmt.Println("Contents:")
 	fmt.Println("  config.toml    — tracked files, glob patterns and enrolled hosts")
-	fmt.Println("  manifest.json  — sync ledger (md5, mtime, mode, owner per file)")
+	fmt.Println("  manifest.json  — sync ledger (hash, mtime, mode, owner per file)")
 	fmt.Println("  vault/         — age-encrypted blobs")
 	fmt.Println("  pending/       — enrollment requests awaiting approval")
 	fmt.Println()
@@ -68,10 +68,10 @@ func printPostInit(root string) {
 	fmt.Println()
 	fmt.Println("Then restart your shell (or re-source the rc file) and enroll this host:")
 	fmt.Println()
-	fmt.Println("    ktraveler enroll <host-name>")
+	fmt.Println("    ktraveler enroll request <host-name>")
 	fmt.Println()
 	fmt.Printf("For one-shot use without touching your rc, prefix the command instead:\n\n")
-	fmt.Printf("    KTRAVELER_USB=%s ktraveler enroll <host-name>\n", shellQuote(root))
+	fmt.Printf("    KTRAVELER_USB=%s ktraveler enroll request <host-name>\n", shellQuote(root))
 }
 
 // shellSuggestions returns one or two suggested commands to persist

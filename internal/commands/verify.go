@@ -12,8 +12,8 @@ import (
 	"github.com/davidbouche/key-traveler/internal/vault"
 )
 
-// Verify checks every vault blob: can we decrypt it, and does its md5 match
-// the manifest's last_push.md5?
+// Verify checks every vault blob: can we decrypt it, and does its hash match
+// the manifest's last_push record?
 func Verify(_ []string) error {
 	root, err := paths.USBRoot()
 	if err != nil {
@@ -48,7 +48,7 @@ func Verify(_ []string) error {
 			continue
 		}
 		if got != st.LastPush.MD5 {
-			fmt.Printf("  FAIL %s: md5 mismatch (vault=%s, manifest=%s)\n",
+			fmt.Printf("  FAIL %s: hash mismatch (vault=%s, manifest=%s)\n",
 				f.Vault, shortHash(got), shortHash(st.LastPush.MD5))
 			problems++
 			continue

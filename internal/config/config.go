@@ -65,6 +65,9 @@ func Load(usbRoot string) (*Config, error) {
 	if err := toml.Unmarshal(data, &c); err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", path, err)
 	}
+	if c.Vault.Version != SchemaVersion && c.Vault.Version != 0 {
+		return nil, fmt.Errorf("%s: unsupported schema version %d (this binary supports version %d)", path, c.Vault.Version, SchemaVersion)
+	}
 	return &c, nil
 }
 

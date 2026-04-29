@@ -171,7 +171,10 @@ func List(_ []string) error {
 		return err
 	}
 
-	matches, _ := patterns.Resolve(cfg)
+	matches, err := patterns.Resolve(cfg)
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("vault: %s (%d host(s), %d file(s), %d pattern(s))\n",
 		root, len(cfg.Hosts), len(cfg.Files), len(cfg.Patterns))

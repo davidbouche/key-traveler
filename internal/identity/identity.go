@@ -69,6 +69,24 @@ func Generate() (*age.X25519Identity, string, error) {
 	return id, id.Recipient().String(), nil
 }
 
+// LoadOrGenerate returns the existing identity if one is already on disk,
+// or generates a fresh one otherwise. This makes enroll request idempotent:
+// a retry after a partial failure reuses the key instead of failing.
+func LoadOrGenerate() (*age.X25519Identity, string, error) {
+	path, err := IdentityPath()
+	if err != nil {
+		return nil, "", err
+	}
+	if _, err := os.Stat(path); err == nil {
+		id, err := Load()
+		if err != nil {
+			return nil, "", err
+		}
+		return id, id.Recipient().String(), nil
+	}
+	return Generate()
+}
+
 // Load reads the local private key. Refuses to load if permissions are too lax.
 func Load() (*age.X25519Identity, error) {
 	path, err := IdentityPath()
@@ -77,7 +95,7 @@ func Load() (*age.X25519Identity, error) {
 	}
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("identity not found at %s (run `ktraveler enroll` or `ktraveler enroll-request`)", path)
+		return nil, fmt.Errorf("identity not found at %s (run `ktraveler enroll request <name>`)", path)
 	}
 	if fi.Mode().Perm()&0o077 != 0 {
 		return nil, fmt.Errorf("identity file %s has insecure permissions %o (must be 0600)", path, fi.Mode().Perm())
